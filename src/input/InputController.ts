@@ -26,12 +26,14 @@ const PREVENT_DEFAULT = new Set([
 
 export class InputController {
   private readonly held = new Set<string>()
+  private serveQueued = false   // flanco de Space, consumido una sola vez
   private readonly onKeyDown: (e: KeyboardEvent) => void
   private readonly onKeyUp: (e: KeyboardEvent) => void
 
   constructor(private readonly target: Window = window) {
     this.onKeyDown = (e) => {
       if (PREVENT_DEFAULT.has(e.code)) e.preventDefault()
+      if (e.code === 'Space' && !this.held.has('Space')) this.serveQueued = true
       this.held.add(e.code)
     }
     this.onKeyUp = (e) => {
@@ -39,6 +41,15 @@ export class InputController {
     }
     target.addEventListener('keydown', this.onKeyDown)
     target.addEventListener('keyup', this.onKeyUp)
+  }
+
+  /** Devuelve true una única vez por pulsación de Space (saque). */
+  pollServe(): boolean {
+    if (this.serveQueued) {
+      this.serveQueued = false
+      return true
+    }
+    return false
   }
 
   /** Vector de movimiento normalizado en el plano XZ (mundo). */

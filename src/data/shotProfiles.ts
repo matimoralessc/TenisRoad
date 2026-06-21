@@ -1,14 +1,14 @@
 /**
- * Perfiles base de golpe del jugador (Fase 3).
+ * Perfiles base de golpe (Fase 3, refinado en Fase 4).
  *
- * A diferencia de los perfiles fijos de la BallMachine (vectores absolutos),
- * estos definen la *firma* del golpe (rapidez, ángulo de lanzamiento y spin)
- * de forma independiente de la dirección. El ShotController construye el vector
- * de velocidad real apuntando desde el contacto hacia el objetivo (lado rival).
+ * Definen la *firma* del golpe (rapidez, ángulo, spin) de forma independiente
+ * de la dirección. `spin` es una MAGNITUD CON SIGNO sobre el "eje de topspin":
+ *   spin > 0  → topspin (Magnus hacia abajo, cae/kickea)
+ *   spin < 0  → backspin/slice (Magnus hacia arriba, flota)
  *
- * Convención de spin: el jugador sur golpea hacia −z (hacia la red/norte).
- *   ω en eje +x  → Magnus hacia ARRIBA  (backspin / slice, flota)
- *   ω en eje −x  → Magnus hacia ABAJO   (topspin, cae y kickea)
+ * shotMath.buildImpulse() deriva el vector de spin real a partir de la dirección
+ * de viaje, por lo que el mismo perfil sirve para el jugador (golpea hacia −z)
+ * y para la IA (golpea hacia +z) sin invertir signos a mano.
  */
 
 export type ShotKey = 'flat' | 'topspin' | 'slice' | 'drop'
@@ -19,39 +19,19 @@ export interface BaseShotProfile {
   speed: number
   /** Ángulo de lanzamiento sobre la horizontal (grados) */
   launchAngle: number
-  /** Spin base [ωx, ωy, ωz] (rad/s), calibrado para viaje hacia −z */
-  spin: [number, number, number]
+  /** Magnitud de spin con signo sobre el eje de topspin (rad/s) */
+  spin: number
 }
 
 export const SHOT_PROFILES: Record<ShotKey, BaseShotProfile> = {
   // J — plano y penetrante: arco bajo, mínimo topspin de control
-  flat: {
-    name: 'Flat Drive',
-    speed: 33,
-    launchAngle: 6,
-    spin: [-40, 0, 0],
-  },
+  flat:    { name: 'Flat Drive',     speed: 33, launchAngle: 6,  spin: 40 },
   // K — topspin pesado: arco alto, cae con kick explosivo
-  topspin: {
-    name: 'Heavy Topspin',
-    speed: 26,
-    launchAngle: 19,
-    spin: [-400, 0, 0],
-  },
+  topspin: { name: 'Heavy Topspin',  speed: 26, launchAngle: 19, spin: 400 },
   // L — slice: flota, bote bajo y deslizado (backspin)
-  slice: {
-    name: 'Backhand Slice',
-    speed: 19,
-    launchAngle: 12,
-    spin: [250, 0, 0],
-  },
+  slice:   { name: 'Backhand Slice', speed: 19, launchAngle: 12, spin: -250 },
   // I — drop/lob corto: arco empinado, muere cerca de la red (backspin)
-  drop: {
-    name: 'Drop Shot',
-    speed: 9,
-    launchAngle: 30,
-    spin: [300, 0, 0],
-  },
+  drop:    { name: 'Drop Shot',      speed: 9,  launchAngle: 30, spin: -300 },
 }
 
 /** Profundidad Z objetivo por defecto en el lado rival (norte, z<0). */

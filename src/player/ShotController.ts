@@ -1,4 +1,3 @@
-import * as THREE from 'three'
 import { Ball } from '../entities/Ball'
 import { Player } from '../entities/Player'
 import { Trail } from '../scene/Trail'
@@ -9,10 +8,9 @@ import {
   TARGET_DEPTH_Z,
   type ShotKey,
 } from '../data/shotProfiles'
-import {
-  STRIKE_RADIUS,
-  PLAYER_MAX_SPEED,
-} from '../physics/constants'
+import { buildImpulse } from './shotMath'
+import { STRIKE_RADIUS, PLAYER_MAX_SPEED } from '../physics/constants'
+import type { ShotAttributes } from '../data/players'
 
 // ── Tuning de la mecánica de timing ───────────────────────────────────────────
 const CHARGE_RISE = 0.7        // s para llenar la barra 0→1 (luego rebota)
@@ -23,7 +21,7 @@ const MAX_REACH_HEIGHT = 2.2   // m: por encima no se alcanza la pelota
 // Zonas (por valor de la barra; el pico = sweet spot)
 const GOOD_LO = 0.70
 const PERFECT_LO = 0.90
-const PERFECT_LO_STRETCH = 0.95  // ventana Perfect comprimida al correr
+const PERFECT_LO_FULL_SHRINK = 0.95  // ventana Perfect comprimida (mental = 0)
 
 export type ShotState = 'idle' | 'charging'
 export type TimingResult = 'perfect' | 'good' | 'early' | 'late'
@@ -58,14 +56,14 @@ const RESULT_LABEL: Record<TimingResult, string> = {
 }
 
 /**
- * Máquina de estados del golpe (Fase 3): IDLE → CHARGING → EXECUTE → IDLE.
+ * Máquina de estados del golpe humano: IDLE → CHARGING → EXECUTE → IDLE.
  *
- * CHARGING usa un modelo ping-pong/sobrecarga: la barra sube 0→1 en CHARGE_RISE
- * y rebota hacia abajo si se mantiene de más. El sweet spot está en el pico.
- * Al correr (>75% de MAX_SPEED) la ventana Perfect se comprime (tiro defensivo).
+ * Modelo ping-pong/sobrecarga: la barra sube 0→1 en CHARGE_RISE y rebota si se
+ * mantiene de más; el sweet spot está en el pico. Al correr (>75% de MAX_SPEED)
+ * la ventana Perfect se comprime, modulada por el atributo `mental` del jugador.
  *
- * EXECUTE es transitorio: al soltar la tecla se valida proximidad (<1.5 m),
- * se evalúa el timing y se aplica el impulso a la pelota en un solo tick.
+ * EXECUTE es transitorio: al soltar la tecla valida proximidad (<1.5 m), evalúa
+ * el timing y aplica el impulso a la pelota. Si conecta, invoca `onStrike`.
  */
 export class ShotController {
   private state: ShotState = 'idle'
@@ -74,14 +72,14 @@ export class ShotController {
   private phase = 1            // +1 subiendo, −1 bajando (rebote)
   private targetX = 0          // objetivo en el lado rival (m)
 
-  private readonly _target = new THREE.Vector3()
-
   constructor(
     private readonly ball: Ball,
     private readonly player: Player,
     private readonly trail: Trail,
     private readonly input: InputController,
+    private readonly attrs: ShotAttributes,
     private readonly onResult?: (label: string) => void,
+    private readonly onStrike?: () => void,
   ) {}
 
   /** ¿Está el jugador "on the stretch" (corriendo defensivamente)? */
@@ -89,9 +87,14 @@ export class ShotController {
     return this.player.speed > STRETCH_THRESHOLD * PLAYER_MAX_SPEED
   }
 
-  /** Límite inferior de la zona Perfect según estado de carrera. */
+  /**
+   * Límite inferior de la zona Perfect. Al correr se encoge; cuánto depende del
+   * mental (1 → casi sin encoger; 0 → encogimiento total a PERFECT_LO_FULL_SHRINK).
+   */
   private get perfectLo(): number {
-    return this.stretch ? PERFECT_LO_STRETCH : PERFECT_LO
+    if (!this.stretch) return PERFECT_LO
+    const shrink = (PERFECT_LO_FULL_SHRINK - PERFECT_LO) * (1 - this.attrs.mental)
+    return PERFECT_LO + shrink
   }
 
   update(dt: number): void {
@@ -105,7 +108,6 @@ export class ShotController {
     this.advanceCharge(dt)
     this.advanceAim(dt)
 
-    // Soltar la tecla del golpe en curso → ejecutar
     if (!this.input.isShotHeld(this.shotType)) {
       this.execute()
     }
@@ -155,7 +157,6 @@ export class ShotController {
   private classify(): TimingResult {
     if (this.charge >= this.perfectLo) return 'perfect'
     if (this.charge >= GOOD_LO) return 'good'
-    // Por debajo de la zona buena: distinguir por fase del ping-pong
     return this.phase > 0 ? 'early' : 'late'
   }
 
@@ -176,6 +177,7 @@ export class ShotController {
     const result = this.classify()
     this.applyShot(result)
     this.onResult?.(RESULT_LABEL[result])
+    this.onStrike?.()
     this.reset()
   }
 
@@ -183,33 +185,25 @@ export class ShotController {
     const base = SHOT_PROFILES[this.shotType]
     const tune = TIMING[result]
 
+    // Multiplicadores por atributo del jugador
+    let power = tune.power
+    let spin = tune.spin
+    if (this.shotType === 'flat') power *= this.attrs.flatDepth
+    if (this.shotType === 'topspin') spin *= this.attrs.topspinPower
+
     // Objetivo con error de timing (determinista: signo según la fase)
     const aimSign = this.phase > 0 ? 1 : -1
     const targetX = this.targetX + aimSign * tune.aimError
-    this._target.set(targetX, 0, TARGET_DEPTH_Z)
 
-    // Dirección horizontal desde el contacto hacia el objetivo
-    const bp = this.ball.state.position
-    let dx = this._target.x - bp.x
-    let dz = this._target.z - bp.z
-    const hLen = Math.hypot(dx, dz) || 1
-    dx /= hLen
-    dz /= hLen
-
-    // Velocidad: rapidez·timing descompuesta por el ángulo de lanzamiento
-    const speed = base.speed * tune.power
-    const ang = (base.launchAngle * Math.PI) / 180
-    const hSpeed = speed * Math.cos(ang)
-    const vy = speed * Math.sin(ang)
-
-    const velocity: [number, number, number] = [dx * hSpeed, vy, dz * hSpeed]
-    const spin: [number, number, number] = [
-      base.spin[0] * tune.spin,
-      base.spin[1] * tune.spin,
-      base.spin[2] * tune.spin,
-    ]
-
-    this.ball.applyImpulse({ name: base.name, velocity, spin })
+    const impulse = buildImpulse(
+      this.ball.state.position,
+      targetX,
+      TARGET_DEPTH_Z,
+      base,
+      power,
+      spin,
+    )
+    this.ball.applyImpulse(impulse)
     this.trail.clear()
   }
 

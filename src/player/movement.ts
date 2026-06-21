@@ -15,6 +15,20 @@ export interface MovementState {
 }
 
 /**
+ * Parámetros de inercia por personaje (Fase 4): permiten que Player y AI usen
+ * el MISMO integrador con atributos distintos (atletismo) y su propia mitad de
+ * cancha. Lo no especificado cae a las constantes globales por defecto.
+ */
+export interface MovementParams {
+  accel?: number
+  maxSpeed?: number
+  friction?: number
+  xLimit?: number
+  zMin?: number
+  zMax?: number
+}
+
+/**
  * Integrador inercial a paso fijo (120 Hz).
  *
  *  1. Aceleración: si hay dirección de input, v += dir·ACCEL·dt (clamp a MAX).
@@ -30,23 +44,31 @@ export function stepMovement(
   state: MovementState,
   dir: { x: number; z: number },
   dt: number,
+  params: MovementParams = {},
 ): void {
+  const accel = params.accel ?? PLAYER_ACCEL
+  const maxSpeed = params.maxSpeed ?? PLAYER_MAX_SPEED
+  const friction = params.friction ?? PLAYER_FRICTION
+  const xLimit = params.xLimit ?? PLAYER_X_LIMIT
+  const zMin = params.zMin ?? PLAYER_Z_MIN
+  const zMax = params.zMax ?? PLAYER_Z_MAX
+
   const v = state.velocity
   const hasInput = dir.x !== 0 || dir.z !== 0
 
   if (hasInput) {
-    v.x += dir.x * PLAYER_ACCEL * dt
-    v.z += dir.z * PLAYER_ACCEL * dt
+    v.x += dir.x * accel * dt
+    v.z += dir.z * accel * dt
 
     // Clamp de rapidez en el plano XZ
     const speed = Math.hypot(v.x, v.z)
-    if (speed > PLAYER_MAX_SPEED) {
-      const s = PLAYER_MAX_SPEED / speed
+    if (speed > maxSpeed) {
+      const s = maxSpeed / speed
       v.x *= s
       v.z *= s
     }
   } else {
-    const decay = Math.pow(PLAYER_FRICTION, dt)
+    const decay = Math.pow(friction, dt)
     v.x *= decay
     v.z *= decay
     // Corta residuales imperceptibles para detenerse limpio
@@ -60,11 +82,11 @@ export function stepMovement(
   p.z += v.z * dt
 
   // Límites rígidos: detiene la componente que choca
-  if (p.x < -PLAYER_X_LIMIT) { p.x = -PLAYER_X_LIMIT; if (v.x < 0) v.x = 0 }
-  else if (p.x > PLAYER_X_LIMIT) { p.x = PLAYER_X_LIMIT; if (v.x > 0) v.x = 0 }
+  if (p.x < -xLimit) { p.x = -xLimit; if (v.x < 0) v.x = 0 }
+  else if (p.x > xLimit) { p.x = xLimit; if (v.x > 0) v.x = 0 }
 
-  if (p.z < PLAYER_Z_MIN) { p.z = PLAYER_Z_MIN; if (v.z < 0) v.z = 0 }
-  else if (p.z > PLAYER_Z_MAX) { p.z = PLAYER_Z_MAX; if (v.z > 0) v.z = 0 }
+  if (p.z < zMin) { p.z = zMin; if (v.z < 0) v.z = 0 }
+  else if (p.z > zMax) { p.z = zMax; if (v.z > 0) v.z = 0 }
 }
 
 /** Rapidez actual en el plano XZ (m/s). */

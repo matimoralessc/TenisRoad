@@ -28,7 +28,7 @@
     }
     .score-row {
       display: grid;
-      grid-template-columns: 28px 1fr auto auto auto auto;
+      grid-template-columns: 28px 1fr 28px 28px 36px;
       align-items: center;
       gap: 10px;
       color: #fff;
@@ -36,10 +36,9 @@
       letter-spacing: 0.5px;
       height: 26px;
     }
-    .score-row .flag { font-size: 16px; }
     .score-row .name { font-weight: 600; text-transform: uppercase; font-size: 12px; color: #e0e0e0; }
-    .score-row .set  { width: 18px; text-align: center; color: #aaa; font-size: 12px; }
-    .score-row .set.won { color: #fff; font-weight: 700; }
+    .score-row .set  { width: 24px; text-align: center; color: #aaa; font-size: 12px; }
+    .score-row .games { width: 24px; text-align: center; color: #fff; font-size: 13px; font-weight: 600; }
     .score-row .pts  { width: 32px; text-align: center; font-size: 15px; font-weight: 700; color: #FFD700; }
     .score-divider { height: 1px; background: #2a2a2a; margin: 2px 0; }
     .serve-dot {
@@ -48,6 +47,25 @@
       display: inline-block;
     }
     .serve-dot.hidden { background: transparent; }
+
+    /* Announcement banner (FAULT / OUT / NET / WINNER / match) */
+    #announce {
+      position: fixed;
+      top: 38%;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-shadow: 0 2px 14px rgba(0,0,0,0.9);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 120;
+      pointer-events: none;
+    }
+    #announce.show { opacity: 1; }
 
     /* Info overlay */
     #info-bar {
@@ -92,22 +110,23 @@
   <div id="scoreboard">
     <div class="score-row">
       <span class="serve-dot" id="serve-p1"></span>
-      <span class="name">C. Alcaraz</span>
-      <span class="set" id="p1-s1">0</span>
-      <span class="set" id="p1-s2">-</span>
-      <span class="set" id="p1-s3">-</span>
-      <span class="pts"  id="p1-pts">0</span>
+      <span class="name" id="p1-name">Player 1</span>
+      <span class="set"   id="p1-sets">0</span>
+      <span class="games" id="p1-games">0</span>
+      <span class="pts"   id="p1-pts">0</span>
     </div>
     <div class="score-divider"></div>
     <div class="score-row">
       <span class="serve-dot hidden" id="serve-p2"></span>
-      <span class="name">J. Sinner</span>
-      <span class="set" id="p2-s1">0</span>
-      <span class="set" id="p2-s2">-</span>
-      <span class="set" id="p2-s3">-</span>
-      <span class="pts"  id="p2-pts">0</span>
+      <span class="name" id="p2-name">Player 2</span>
+      <span class="set"   id="p2-sets">0</span>
+      <span class="games" id="p2-games">0</span>
+      <span class="pts"   id="p2-pts">0</span>
     </div>
   </div>
+
+  <!-- Announcement banner -->
+  <div id="announce"></div>
 
   <!-- Surface badge -->
   <div id="surface-badge">Surface: <span>Clay</span></div>
@@ -116,10 +135,11 @@
   <!-- Controls info -->
   <div id="info-bar">
     WASD/Arrows — Mover &nbsp;|&nbsp;
+    <span>Space</span> Saque &nbsp;|&nbsp;
     <span>J</span> Flat &nbsp;
     <span>K</span> Topspin &nbsp;
     <span>L</span> Slice &nbsp;
-    <span>I</span> Lob/Drop
+    <span>I</span> Drop
   </div>
 
   <script type="module" src="/src/main.ts"></script>
