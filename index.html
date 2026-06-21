@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TenisRoad – ATP Simulation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; overflow: hidden; font-family: 'Arial', sans-serif; }
+    canvas { display: block; }
+
+    /* Scoreboard estilo ATP Tour */
+    #scoreboard {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.82);
+      border: 1px solid #2a2a2a;
+      border-radius: 4px;
+      padding: 8px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 340px;
+      backdrop-filter: blur(6px);
+      z-index: 100;
+    }
+    .score-row {
+      display: grid;
+      grid-template-columns: 28px 1fr auto auto auto auto;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      height: 26px;
+    }
+    .score-row .flag { font-size: 16px; }
+    .score-row .name { font-weight: 600; text-transform: uppercase; font-size: 12px; color: #e0e0e0; }
+    .score-row .set  { width: 18px; text-align: center; color: #aaa; font-size: 12px; }
+    .score-row .set.won { color: #fff; font-weight: 700; }
+    .score-row .pts  { width: 32px; text-align: center; font-size: 15px; font-weight: 700; color: #FFD700; }
+    .score-divider { height: 1px; background: #2a2a2a; margin: 2px 0; }
+    .serve-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #FFD700;
+      display: inline-block;
+    }
+    .serve-dot.hidden { background: transparent; }
+
+    /* Info overlay */
+    #info-bar {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 20px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 4px;
+      padding: 6px 18px;
+      color: #888;
+      font-size: 11px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      z-index: 100;
+    }
+    #info-bar span { color: #ccc; }
+
+    /* Surface badge */
+    #surface-badge, #shot-badge {
+      position: fixed;
+      right: 20px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 3px;
+      padding: 5px 12px;
+      color: #888;
+      font-size: 10px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      z-index: 100;
+    }
+    #surface-badge { top: 16px; }
+    #shot-badge    { top: 44px; }
+    #surface-badge span { color: #cc7722; font-weight: 700; }
+    #shot-badge span    { color: #FFD700; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <!-- Scoreboard ATP -->
+  <div id="scoreboard">
+    <div class="score-row">
+      <span class="serve-dot" id="serve-p1"></span>
+      <span class="name">C. Alcaraz</span>
+      <span class="set" id="p1-s1">0</span>
+      <span class="set" id="p1-s2">-</span>
+      <span class="set" id="p1-s3">-</span>
+      <span class="pts"  id="p1-pts">0</span>
+    </div>
+    <div class="score-divider"></div>
+    <div class="score-row">
+      <span class="serve-dot hidden" id="serve-p2"></span>
+      <span class="name">J. Sinner</span>
+      <span class="set" id="p2-s1">0</span>
+      <span class="set" id="p2-s2">-</span>
+      <span class="set" id="p2-s3">-</span>
+      <span class="pts"  id="p2-pts">0</span>
+    </div>
+  </div>
+
+  <!-- Surface badge -->
+  <div id="surface-badge">Surface: <span>Clay</span></div>
+  <div id="shot-badge">Shot: <span id="shot-name">—</span></div>
+
+  <!-- Controls info -->
+  <div id="info-bar">
+    WASD/Arrows — Mover &nbsp;|&nbsp;
+    <span>J</span> Flat &nbsp;
+    <span>K</span> Topspin &nbsp;
+    <span>L</span> Slice &nbsp;
+    <span>I</span> Lob/Drop
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
