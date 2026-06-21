@@ -36,3 +36,26 @@ export const NET_RESTITUTION = 0.15
 
 /** Empuje vertical extra al botar con topspin agarrado (kick "pesado") */
 export const TOPSPIN_KICK = 0.2
+
+// ── Jugador (Fase 3) ──────────────────────────────────────────────────────────
+/** Aceleración del jugador cuando hay input de dirección (m/s²) */
+export const PLAYER_ACCEL = 30
+/** Velocidad máxima de desplazamiento (m/s) */
+export const PLAYER_MAX_SPEED = 6.5
+/**
+ * Fracción de velocidad retenida tras 1 s sin input: v *= FRICTION^dt.
+ * 0.05 → derrape con vida media ≈ 0.23 s (peso/inercia realistas).
+ */
+export const PLAYER_FRICTION = 0.05
+/** Radio de golpeo: la pelota debe estar a < 1.5 m para conectar (m) */
+export const STRIKE_RADIUS = 1.5
+/** Altura del punto de contacto del golpe (m) */
+export const STRIKE_HEIGHT = 0.9
+
+// ── Límites de cancha jugables del jugador sur (m) ────────────────────────────
+/** No puede cruzar el plano de la red (deja un colchón) */
+export const PLAYER_Z_MIN = 0.8
+/** No puede correr más profundo que esto (fuera del encuadre de cámara) */
+export const PLAYER_Z_MAX = 14.5
+/** Margen lateral fuera de la línea de dobles para correr */
+export const PLAYER_X_LIMIT = 7.0

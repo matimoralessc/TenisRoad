@@ -3,9 +3,13 @@ import { createCourt } from './scene/court'
 import { setupCamera } from './camera/setupCamera'
 import { startGameLoop } from './engine/gameLoop'
 import { Ball } from './entities/Ball'
+import { Player } from './entities/Player'
 import { Trail } from './scene/Trail'
 import { PhysicsEngine } from './physics/PhysicsEngine'
 import { BallMachine } from './test/BallMachine'
+import { InputController } from './input/InputController'
+import { ShotController } from './player/ShotController'
+import { ShotTimingBar } from './ui/ShotTimingBar'
 import type { Surface } from './data/courtDimensions'
 
 // ── RENDERER ────────────────────────────────────────────────────────────────
@@ -53,26 +57,42 @@ const camera = setupCamera(renderer)
 const SURFACE: Surface = 'clay'
 createCourt(scene, SURFACE)
 
-// ── FÍSICA + ENTIDADES + BANCO DE PRUEBAS (Fase 2) ────────────────────────────
+// ── FÍSICA + ENTIDADES (Fase 2) ───────────────────────────────────────────────
 const ball = new Ball(scene)
 const trail = new Trail(scene)
 const engine = new PhysicsEngine()
 
+// ── JUGADOR + INPUT + GOLPE + UI (Fase 3) ─────────────────────────────────────
+const player = new Player(scene)
+const input = new InputController()
+const timingBar = new ShotTimingBar()
+
 const shotLabel = document.getElementById('shot-name')
-const machine = new BallMachine(ball, trail, (profile) => {
-  if (shotLabel) shotLabel.textContent = profile.name
-})
+const setLabel = (text: string) => { if (shotLabel) shotLabel.textContent = text }
+
+const shot = new ShotController(ball, player, trail, input, setLabel)
+
+// Alimentador infinito: cicla cuadrantes para forzar el desplazamiento
+const machine = new BallMachine(ball, trail, (profile) => setLabel(`Feed: ${profile.name}`))
 
 // ── GAME LOOP (timestep fijo 120 Hz + interpolación alpha) ────────────────────
 startGameLoop({
   update(dt) {
-    machine.update(dt)          // dispara un perfil cada 4 s
-    ball.cachePrevious()        // guarda prev para interpolar el render
+    const dir = input.movementVector()
+    player.cachePrevious()      // prev del jugador para interpolar
+    player.step(dir, dt)        // física inercial (accel/fricción/límites)
+
+    shot.update(dt)             // máquina de estados del golpe (puede impactar)
+    machine.update(dt)          // alimenta un cuadrante cada 3.5 s
+
+    ball.cachePrevious()        // prev de la pelota para interpolar
     engine.step(ball.state, dt, SURFACE)
     trail.push(ball.state.position)
   },
   render(alpha) {
     ball.syncMesh(alpha)        // lerp(prev, curr, alpha) → sin jitter
+    player.syncMesh(alpha)
+    timingBar.render(player, camera, shot.getView(), alpha)
     renderer.render(scene, camera)
   },
 })
