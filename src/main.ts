@@ -25,8 +25,10 @@ import { AudioManager } from './audio/AudioManager'
 import { makeSkyTexture } from './scene/textures'
 
 // ── RENDERER ────────────────────────────────────────────────────────────────
-const renderer = new THREE.WebGLRenderer({ antialias: true })
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
+// Cap de pixel ratio a 1.5: en pantallas hidpi (DPR 2) renderizar a 2× cuadruplica
+// los fragmentos y hunde el framerate; 1.5 mantiene nitidez con ~44% menos píxeles.
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -57,8 +59,8 @@ scene.add(hemi)
 const sun = new THREE.DirectionalLight(0xfff1d4, 1.85)
 sun.position.set(6, 18, 10)
 sun.castShadow = true
-sun.shadow.mapSize.width  = 2048
-sun.shadow.mapSize.height = 2048
+sun.shadow.mapSize.width  = 1024
+sun.shadow.mapSize.height = 1024
 sun.shadow.camera.near = 1
 sun.shadow.camera.far  = 50
 // Frustum ceñido a la zona de juego (cancha + jugadores): más texeles por metro
