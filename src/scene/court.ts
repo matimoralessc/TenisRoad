@@ -28,6 +28,7 @@ export function createCourt(
     new THREE.MeshLambertMaterial({ color: groundColor }),
   )
   ground.rotation.x = -Math.PI / 2
+  ground.position.y = -0.02   // bajo la superficie: evita z-fighting (parpadeo) con la cancha
   ground.receiveShadow = true
   scene.add(ground)
 

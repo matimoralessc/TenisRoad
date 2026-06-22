@@ -45,8 +45,8 @@ export const PLAYERS: Record<PlayerId, PlayerAttributes> = {
     name: 'N. Djokovic',
     maxSpeed: 5.9,
     decel: 53,
-    topspinPower: 1.1,
-    flatDepth: 1.32,
+    topspinPower: 1.05,
+    flatDepth: 1.2,
     mental: 0.95,
   },
 }

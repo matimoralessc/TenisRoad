@@ -60,12 +60,15 @@ sun.castShadow = true
 sun.shadow.mapSize.width  = 2048
 sun.shadow.mapSize.height = 2048
 sun.shadow.camera.near = 1
-sun.shadow.camera.far  = 60
-sun.shadow.camera.left   = -16
-sun.shadow.camera.right  =  16
-sun.shadow.camera.top    =  30
-sun.shadow.camera.bottom = -30
-sun.shadow.bias = -0.0005
+sun.shadow.camera.far  = 50
+// Frustum ceñido a la zona de juego (cancha + jugadores): más texeles por metro
+// → sombras estables que no tiritan al moverse la acción.
+sun.shadow.camera.left   = -10
+sun.shadow.camera.right  =  10
+sun.shadow.camera.top    =  16
+sun.shadow.camera.bottom = -16
+sun.shadow.bias = -0.0003
+sun.shadow.normalBias = 0.02
 scene.add(sun)
 
 // Relleno frío tenue desde el otro lado (luz rebotada del estadio)
