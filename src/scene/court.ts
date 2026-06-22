@@ -13,7 +13,11 @@ const LINE_Y = 0.001  // offset vertical para evitar z-fighting
  * Optimización clave: TODAS las líneas se fusionan en una sola BufferGeometry
  * → 1 draw call y 1 material en lugar de ~14.
  */
-export function createCourt(scene: THREE.Scene, surface: Surface = 'clay'): void {
+export function createCourt(
+  scene: THREE.Scene,
+  surface: Surface = 'clay',
+  maxAniso = 8,
+): void {
   const s = SURFACES[surface]
 
   // ── SUELO BASE (fuera de la cancha) ───────────────────────────────────────
@@ -30,7 +34,7 @@ export function createCourt(scene: THREE.Scene, surface: Surface = 'clay'): void
   // ── SUPERFICIE DE JUEGO ───────────────────────────────────────────────────
   const court = new THREE.Mesh(
     new THREE.PlaneGeometry(COURT.doublesHalfWidth * 2, COURT.halfLength * 2),
-    buildSurfaceMaterial(surface, s.color),
+    buildSurfaceMaterial(surface, s.color, maxAniso),
   )
   court.rotation.x = -Math.PI / 2
   court.receiveShadow = true
@@ -52,12 +56,12 @@ export function createCourt(scene: THREE.Scene, surface: Surface = 'clay'): void
  * que capte la luz del estadio en vez de leerse como un bloque plano. En otras
  * superficies, un Standard liso del color base.
  */
-function buildSurfaceMaterial(surface: Surface, color: number): THREE.Material {
+function buildSurfaceMaterial(surface: Surface, color: number, maxAniso = 8): THREE.Material {
   if (surface === 'clay') {
     return new THREE.MeshStandardMaterial({
-      map: makeClayTexture(),
-      normalMap: makeClayNormalMap(),
-      normalScale: new THREE.Vector2(0.35, 0.35),
+      map: makeClayTexture(maxAniso),
+      normalMap: makeClayNormalMap(maxAniso),
+      normalScale: new THREE.Vector2(0.18, 0.18),
       roughness: 0.96,
       metalness: 0.0,
     })
@@ -89,7 +93,7 @@ function buildStadium(scene: THREE.Scene): void {
   const addGrandstand = (
     length: number, x: number, z: number, faceX: number,   // faceX = dir hacia la cancha
   ): void => {
-    const baseH = 1.0, tierH = 4.5, depth = 9
+    const baseH = 1.0, tierH = 3.6, depth = 9
     // Peldaño bajo (más cerca de la cancha) y cuerpo alto detrás
     const low = new THREE.Mesh(new THREE.BoxGeometry(depth * 0.45, baseH, length), concreteMat)
     low.position.set(x - faceX * depth * 0.28, baseH / 2, z)
@@ -108,16 +112,14 @@ function buildStadium(scene: THREE.Scene): void {
     crowd.rotation.z = faceX > 0 ? -0.5 : 0.5
     scene.add(crowd)
 
-    // Baranda + franja de patrocinador al borde de la cancha
+    // Baranda discreta al borde de la cancha (sin franja de patrocinador lateral
+    // para no saturar el cuadro)
     const rail = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, length), railMat)
     rail.position.set(x - faceX * depth * 0.5, baseH + 0.2, z)
     scene.add(rail)
-    const sponsor = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, length), sponsorMat)
-    sponsor.position.set(x - faceX * (depth * 0.5 + 0.05), 0.45, z)
-    scene.add(sponsor)
   }
 
-  const sideX = COURT.doublesHalfWidth + 5.6
+  const sideX = COURT.doublesHalfWidth + 7.5
   addGrandstand(38, -sideX, 0, +1)   // grada oeste, mira hacia +x
   addGrandstand(38, sideX, 0, -1)    // grada este, mira hacia −x
 

@@ -32,7 +32,7 @@ function mix(a: number, b: number, t: number): string {
  * parches secos/desgastados concentrados tras ambas líneas de fondo (los
  * extremos v→0 y v→1 del plano de la cancha, donde los jugadores pisan más).
  */
-export function makeClayTexture(): THREE.CanvasTexture {
+export function makeClayTexture(aniso = 8): THREE.CanvasTexture {
   const S = 1024
   const [c, ctx] = canvas(S, S)
 
@@ -62,7 +62,7 @@ export function makeClayTexture(): THREE.CanvasTexture {
 
   // Parches secos tras las baselines (bordes superior e inferior del canvas)
   const drawPatches = (cy: number, spread: number) => {
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 12; i++) {
       const x = S * (0.5 + (Math.random() - 0.5) * 0.7)   // concentrados al centro
       const y = cy + (Math.random() - 0.5) * spread
       const rx = 30 + Math.random() * 70
@@ -89,7 +89,7 @@ export function makeClayTexture(): THREE.CanvasTexture {
   tex.colorSpace = THREE.SRGBColorSpace
   tex.wrapS = THREE.ClampToEdgeWrapping
   tex.wrapT = THREE.ClampToEdgeWrapping
-  tex.anisotropy = 8
+  tex.anisotropy = aniso
   return tex
 }
 
@@ -120,17 +120,17 @@ function blur(field: Float32Array, size: number, passes: number): void {
  * que capta la luz direccional sin coste de geometría. Se tilea finamente sobre
  * la pista (espacio lineal, no sRGB).
  */
-export function makeClayNormalMap(): THREE.CanvasTexture {
+export function makeClayNormalMap(aniso = 8): THREE.CanvasTexture {
   const S = 256
   const [c, ctx] = canvas(S, S)
 
   const h = new Float32Array(S * S)
   for (let i = 0; i < h.length; i++) h[i] = Math.random()
-  blur(h, S, 2)
+  blur(h, S, 4)   // más pasadas → grano más agrupado, menos centelleo a distancia
 
   const img = ctx.createImageData(S, S)
   const data = img.data
-  const strength = 2.2
+  const strength = 1.4
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
       const l = h[y * S + ((x - 1 + S) % S)]
@@ -155,7 +155,8 @@ export function makeClayNormalMap(): THREE.CanvasTexture {
   tex.colorSpace = THREE.NoColorSpace
   tex.wrapS = THREE.RepeatWrapping
   tex.wrapT = THREE.RepeatWrapping
-  tex.repeat.set(6, 6)
+  tex.repeat.set(4, 4)
+  tex.anisotropy = aniso
   return tex
 }
 

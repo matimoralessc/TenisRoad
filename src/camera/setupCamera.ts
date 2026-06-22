@@ -13,8 +13,8 @@ export interface CameraConfig {
  * Mira ligeramente por encima de la red hacia el lado del rival.
  */
 export const DEFAULT_CAMERA: CameraConfig = {
-  fov: 50,
-  position: [0, 8.0, 21.0],
+  fov: 46,
+  position: [0, 8.5, 22.0],
   lookAt: [0, 0.4, 7.0],
 }
 

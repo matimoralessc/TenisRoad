@@ -78,7 +78,7 @@ const camera = setupCamera(renderer)
 
 // ── CANCHA ───────────────────────────────────────────────────────────────────
 const SURFACE: Surface = 'clay'
-createCourt(scene, SURFACE)
+createCourt(scene, SURFACE, renderer.capabilities.getMaxAnisotropy())
 
 // ── MODO ──────────────────────────────────────────────────────────────────────
 // PRACTICE_MODE = true  → banco de práctica (feeder de Fase 3, sin IA ni reglas)
