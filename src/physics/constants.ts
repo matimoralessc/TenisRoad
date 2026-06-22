@@ -37,16 +37,30 @@ export const NET_RESTITUTION = 0.15
 /** Empuje vertical extra al botar con topspin agarrado (kick "pesado") */
 export const TOPSPIN_KICK = 0.2
 
-// ── Jugador (Fase 3) ──────────────────────────────────────────────────────────
-/** Aceleración del jugador cuando hay input de dirección (m/s²) */
-export const PLAYER_ACCEL = 30
-/** Velocidad máxima de desplazamiento (m/s) */
-export const PLAYER_MAX_SPEED = 6.5
+// ── Viento ambiente (Fase 7) ──────────────────────────────────────────────────
 /**
- * Fracción de velocidad retenida tras 1 s sin input: v *= FRICTION^dt.
- * 0.05 → derrape con vida media ≈ 0.23 s (peso/inercia realistas).
+ * Brisa constante en coordenadas de mundo (m/s). El arrastre y el efecto Magnus
+ * usan la velocidad RELATIVA al aire (v − viento), de modo que una pelota lenta
+ * deriva con el viento y los globos altos se ven empujados — como en exteriores.
+ * Compartido por el motor real y el predictor de la IA → siguen siendo coherentes.
  */
-export const PLAYER_FRICTION = 0.05
+export const WIND_X = 0.7
+export const WIND_Y = 0.0
+export const WIND_Z = 0.4
+
+// ── Jugador (Fase 3) ──────────────────────────────────────────────────────────
+/**
+ * Tasa de aceleración hacia la velocidad objetivo (m/s²). 28 → alcanza la
+ * rapidez máxima en ≈0.21 s: arranque ágil pero con peso, no instantáneo.
+ */
+export const PLAYER_ACCEL = 28
+/**
+ * Tasa de frenado al soltar o cambiar de sentido (m/s²). Mayor que ACCEL para
+ * cortar el derrape: 42 → frena desde MAX en ≈0.14 s (plantado, estilo Top Spin).
+ */
+export const PLAYER_DECEL = 42
+/** Velocidad máxima de desplazamiento (m/s) */
+export const PLAYER_MAX_SPEED = 6.0
 /** Radio de golpeo: la pelota debe estar a < 1.5 m para conectar (m) */
 export const STRIKE_RADIUS = 1.5
 /** Altura del punto de contacto del golpe (m) */

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { BALL_RADIUS } from '../physics/constants'
+import { makeBallTexture, hasCanvas } from '../scene/textures'
 import type { BallState, ShotProfile } from '../physics/types'
 
 /**
@@ -13,12 +14,19 @@ export class Ball {
 
   private readonly shadow: THREE.Mesh
   private readonly prevPos = new THREE.Vector3()
+  private readonly spinAxis = new THREE.Vector3()
 
   constructor(scene: THREE.Scene) {
-    this.mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(BALL_RADIUS, 24, 24),
-      new THREE.MeshLambertMaterial({ color: 0xCCDD00 }),
-    )
+    // Fieltro PBR: textura procedural (pelusa + costura) si hay DOM; si no
+    // (test headless), color liso. Rugoso y nada metálico.
+    const mat = new THREE.MeshStandardMaterial({
+      color: hasCanvas() ? 0xffffff : 0xCCDD00,
+      roughness: 0.85,
+      metalness: 0.0,
+    })
+    if (hasCanvas()) mat.map = makeBallTexture()
+
+    this.mesh = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 24, 24), mat)
     this.mesh.castShadow = true
     scene.add(this.mesh)
 
@@ -54,6 +62,15 @@ export class Ball {
   applyImpulse(profile: ShotProfile): void {
     this.state.velocity.set(...profile.velocity)
     this.state.angularVelocity.set(...profile.spin)
+  }
+
+  /** Gira el mesh según el spin real (visual): topspin/slice se ven rodar. */
+  applySpinVisual(dt: number): void {
+    const w = this.state.angularVelocity
+    const len = w.length()
+    if (len < 1e-4) return
+    this.spinAxis.copy(w).divideScalar(len)
+    this.mesh.rotateOnWorldAxis(this.spinAxis, len * dt)
   }
 
   /** Interpola prev→curr con alpha ∈ [0,1) y sincroniza mesh + sombra. */

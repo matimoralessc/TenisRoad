@@ -11,7 +11,7 @@ import {
  * no introduce números mágicos en la lógica de juego.
  *
  *  maxSpeed     → rapidez máxima de desplazamiento (m/s)
- *  friction     → retención de velocidad por segundo (menor = frena/recupera mejor)
+ *  decel        → tasa de frenado/cambio de sentido (m/s²; mayor = recupera mejor)
  *  topspinPower → multiplicador de la magnitud de spin en golpes de topspin
  *  flatDepth    → multiplicador de rapidez en golpes planos (profundidad)
  *  mental       → 0..1: resistencia de la ventana Perfect a encogerse al correr
@@ -20,7 +20,7 @@ export interface PlayerAttributes {
   id: string
   name: string         // formato marcador ATP (ej. "C. Alcaraz")
   maxSpeed: number
-  friction: number
+  decel: number
   topspinPower: number
   flatDepth: number
   mental: number
@@ -29,25 +29,25 @@ export interface PlayerAttributes {
 export type PlayerId = 'alcaraz' | 'djokovic'
 
 export const PLAYERS: Record<PlayerId, PlayerAttributes> = {
-  // Velocidad explosiva + topspin pesado; agresividad extrema castiga su timing al correr.
+  // Velocidad explosiva + topspin pesado; frenado algo más suelto (juego en carrera).
   alcaraz: {
     id: 'alcaraz',
     name: 'C. Alcaraz',
-    maxSpeed: 7.2,
-    friction: 0.05,
+    maxSpeed: 6.0,
+    decel: 40,
     topspinPower: 1.25,
     flatDepth: 1.0,
     mental: 0.5,
   },
-  // Recuperación de élite (fricción baja), profundidad plana suprema, mental impecable.
+  // Recuperación de élite (frenado más alto), profundidad plana suprema, mental impecable.
   djokovic: {
     id: 'djokovic',
     name: 'N. Djokovic',
-    maxSpeed: 6.6,
-    friction: 0.03,
-    topspinPower: 1.0,
-    flatDepth: 1.2,
-    mental: 0.9,
+    maxSpeed: 5.9,
+    decel: 53,
+    topspinPower: 1.1,
+    flatDepth: 1.32,
+    mental: 0.95,
   },
 }
 
@@ -76,8 +76,8 @@ export function movementParamsFor(
 ): MovementParams {
   const base: MovementParams = {
     accel: PLAYER_ACCEL,
+    decel: attr.decel,
     maxSpeed: attr.maxSpeed,
-    friction: attr.friction,
     xLimit: PLAYER_X_LIMIT,
   }
   if (side === 'south') {

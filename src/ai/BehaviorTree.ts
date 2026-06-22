@@ -6,10 +6,10 @@ import { COURT, type Surface } from '../data/courtDimensions'
 import { SHOT_PROFILES } from '../data/shotProfiles'
 import { buildImpulse } from '../player/shotMath'
 import { STRIKE_RADIUS } from '../physics/constants'
-import { predictLanding, type LandingPrediction } from './trajectoryPredict'
+import { predictContact, type LandingPrediction } from './trajectoryPredict'
 import type { PlayerAttributes } from '../data/players'
 
-const REACTION_DELAY = 0.15      // s de procesamiento humano antes de reaccionar
+const REACTION_DELAY = 0.11      // s de procesamiento humano antes de reaccionar
 const ARRIVE_RADIUS = 0.20       // m: deja de empujar input para frenar limpio
 const MAX_REACH_HEIGHT = 2.2     // m
 const STRETCH_THRESHOLD = 0.75   // fracción de maxSpeed → modo defensivo
@@ -66,9 +66,9 @@ export class AIController {
 
       case 'react':
         this.timer -= dt
-        this.moveToward(0, RECOVER_Z, dt)   // recupera al centro mientras procesa
+        this.ai.step({ x: 0, z: 0 }, dt)    // split-step: plantado leyendo la pelota
         if (this.timer <= 0) {
-          this.target = predictLanding(this.ball.state, this.surface)
+          this.target = predictContact(this.ball.state, this.surface)
           this.phase = 'track'
         }
         break
@@ -124,8 +124,8 @@ export class AIController {
       power = 0.85
       targetX = aiX * 0.3
     } else {
-      // Agresivo: a la cancha abierta (lejos del jugador)
-      targetX = playerX >= 0 ? -3.2 : 3.2
+      // Agresivo: a la cancha abierta (lejos del jugador), buscando el corredor
+      targetX = playerX >= 0 ? -3.6 : 3.6
       const crossCourt = Math.sign(targetX) !== Math.sign(aiX || 1)
       if (crossCourt) {
         base = SHOT_PROFILES.topspin
@@ -138,6 +138,7 @@ export class AIController {
 
     const impulse = buildImpulse(this.ball.state.position, targetX, targetZ, base, power, spin)
     this.ball.applyImpulse(impulse)
+    this.ai.swing()
     this.trail.clear()
     this.onStrike?.()
   }

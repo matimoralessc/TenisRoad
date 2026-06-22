@@ -79,6 +79,11 @@ export class MatchStateManager {
     this._state = 'IN_PLAY'
   }
 
+  /** Falta de saque: vuelve a SERVICE_READY (segundo saque) sin tocar el marcador. */
+  returnToServe(): void {
+    this._state = 'SERVICE_READY'
+  }
+
   /** Índice del servidor actual (0 = sur/jugador, 1 = norte/IA). */
   get servingIndex(): 0 | 1 {
     return this.server

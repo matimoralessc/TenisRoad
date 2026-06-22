@@ -176,6 +176,7 @@ export class ShotController {
 
     const result = this.classify()
     this.applyShot(result)
+    this.player.swing()
     this.onResult?.(RESULT_LABEL[result])
     this.onStrike?.()
     this.reset()

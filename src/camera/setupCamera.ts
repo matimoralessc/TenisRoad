@@ -1,19 +1,21 @@
 import * as THREE from 'three'
-import { COURT, NET } from '../data/courtDimensions'
 
 export interface CameraConfig {
   fov: number
-  height: number        // altura de la cámara (m)
-  distanceBehind: number // distancia detrás de la baseline sur (m)
-  lookAtZ: number       // punto de mira en Z
+  position: [number, number, number]  // posición de la cámara (m)
+  lookAt: [number, number, number]    // punto de mira (m)
 }
 
-/** Vista por defecto estilo transmisión TV, detrás del jugador sur. */
+/**
+ * Vista por defecto estilo transmisión TV: cámara alta y retrasada tras la
+ * baseline sur, con suficiente espacio de "run-back" para que el jugador y su
+ * barra de timing queden completamente encuadrados en la parte baja del cuadro.
+ * Mira ligeramente por encima de la red hacia el lado del rival.
+ */
 export const DEFAULT_CAMERA: CameraConfig = {
   fov: 50,
-  height: 9,
-  distanceBehind: 5,
-  lookAtZ: -2,
+  position: [0, 8.0, 21.0],
+  lookAt: [0, 0.4, 7.0],
 }
 
 export function setupCamera(
@@ -27,10 +29,11 @@ export function setupCamera(
     200,
   )
 
-  camera.position.set(0, cfg.height, COURT.halfLength + cfg.distanceBehind)
-  // Mira hacia la red, a la altura del cordón → encuadre de simulador
-  camera.lookAt(0, NET.height_center, cfg.lookAtZ)
+  camera.position.set(...cfg.position)
+  camera.lookAt(...cfg.lookAt)
 
+  // La matriz de proyección se reajusta dinámicamente: así el jugador en primer
+  // plano nunca se sale del cuadro en viewports más anchos o más estrechos.
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()

@@ -4,6 +4,7 @@ import type { BallState, PhysicsEvent, BounceEvent, NetEvent } from './types'
 import {
   G, K_DRAG, C_MAGNUS, BALL_MASS, BALL_RADIUS, INERTIA,
   STICK_FACTOR, SPIN_DECAY, NET_RESTITUTION, TOPSPIN_KICK,
+  WIND_X, WIND_Y, WIND_Z,
 } from './constants'
 
 // Vectores de trabajo reutilizados (cero asignaciones por tick).
@@ -11,6 +12,8 @@ const _acc = new THREE.Vector3()
 const _drag = new THREE.Vector3()
 const _magnus = new THREE.Vector3()
 const _prev = new THREE.Vector3()
+const _vrel = new THREE.Vector3()
+const _wind = new THREE.Vector3(WIND_X, WIND_Y, WIND_Z)
 
 /**
  * Motor determinista de balística + colisiones.
@@ -25,16 +28,17 @@ export class PhysicsEngine {
     _prev.copy(position)
 
     // ── Acumulador de fuerzas → aceleración ─────────────────────────────────
-    // a = g + a_drag(v) + (C_m/m)(ω × v)
+    // a = g + a_drag(v_rel) + (C_m/m)(ω × v_rel),  con v_rel = v − viento
     _acc.set(0, -G, 0)
 
-    const speed = velocity.length()
-    if (speed > 1e-6) {
-      _drag.copy(velocity).multiplyScalar(-K_DRAG * speed)
+    _vrel.copy(velocity).sub(_wind)
+    const airSpeed = _vrel.length()
+    if (airSpeed > 1e-6) {
+      _drag.copy(_vrel).multiplyScalar(-K_DRAG * airSpeed)
       _acc.add(_drag)
     }
 
-    _magnus.copy(angularVelocity).cross(velocity).multiplyScalar(C_MAGNUS / BALL_MASS)
+    _magnus.copy(angularVelocity).cross(_vrel).multiplyScalar(C_MAGNUS / BALL_MASS)
     _acc.add(_magnus)
 
     // ── Euler semi-implícito (simpléctico) ──────────────────────────────────

@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 import {
   PLAYER_ACCEL,
+  PLAYER_DECEL,
   PLAYER_MAX_SPEED,
-  PLAYER_FRICTION,
   PLAYER_Z_MIN,
   PLAYER_Z_MAX,
   PLAYER_X_LIMIT,
@@ -15,28 +15,30 @@ export interface MovementState {
 }
 
 /**
- * Parámetros de inercia por personaje (Fase 4): permiten que Player y AI usen
+ * Parámetros de movimiento por personaje (Fase 4): permiten que Player y AI usen
  * el MISMO integrador con atributos distintos (atletismo) y su propia mitad de
  * cancha. Lo no especificado cae a las constantes globales por defecto.
  */
 export interface MovementParams {
-  accel?: number
+  accel?: number     // tasa de aceleración hacia la velocidad objetivo (m/s²)
+  decel?: number     // tasa de frenado al soltar / cambiar de sentido (m/s²)
   maxSpeed?: number
-  friction?: number
   xLimit?: number
   zMin?: number
   zMax?: number
 }
 
 /**
- * Integrador inercial a paso fijo (120 Hz).
+ * Integrador de velocidad-objetivo a paso fijo (120 Hz). Modelo "plantado"
+ * estilo Top Spin: sin derrape exponencial. La velocidad persigue una
+ * velocidad objetivo (dir·MAX) a tasa fija, frenando con DECEL al soltar.
  *
- *  1. Aceleración: si hay dirección de input, v += dir·ACCEL·dt (clamp a MAX).
- *  2. Fricción:    si no hay input, v *= FRICTION^dt → desaceleración con peso.
+ *  1. Objetivo:    target = dir·maxSpeed  (0 si no hay input).
+ *  2. Persecución: v se acerca a target a `rate·dt` (accel con input, decel sin).
+ *                  Si queda dentro de un paso, ajusta exacto → arranques y
+ *                  frenadas nítidas, sin deslizamiento de hielo.
  *  3. Integración: position += v·dt.
- *  4. Límites:     clamp rígido dentro de la cancha jugable (no cruza la red
- *                  ni se sale del encuadre); al chocar un borde se anula esa
- *                  componente de velocidad (no rebota).
+ *  4. Límites:     clamp rígido dentro de la cancha jugable.
  *
  * `dir` debe venir ya normalizado (|dir| ∈ {0,1}).
  */
@@ -47,8 +49,8 @@ export function stepMovement(
   params: MovementParams = {},
 ): void {
   const accel = params.accel ?? PLAYER_ACCEL
+  const decel = params.decel ?? PLAYER_DECEL
   const maxSpeed = params.maxSpeed ?? PLAYER_MAX_SPEED
-  const friction = params.friction ?? PLAYER_FRICTION
   const xLimit = params.xLimit ?? PLAYER_X_LIMIT
   const zMin = params.zMin ?? PLAYER_Z_MIN
   const zMax = params.zMax ?? PLAYER_Z_MAX
@@ -56,27 +58,28 @@ export function stepMovement(
   const v = state.velocity
   const hasInput = dir.x !== 0 || dir.z !== 0
 
-  if (hasInput) {
-    v.x += dir.x * accel * dt
-    v.z += dir.z * accel * dt
+  // Velocidad objetivo en el plano XZ
+  const targetX = hasInput ? dir.x * maxSpeed : 0
+  const targetZ = hasInput ? dir.z * maxSpeed : 0
 
-    // Clamp de rapidez en el plano XZ
-    const speed = Math.hypot(v.x, v.z)
-    if (speed > maxSpeed) {
-      const s = maxSpeed / speed
-      v.x *= s
-      v.z *= s
-    }
+  // Acelera al pedir movimiento; frena más fuerte al soltar (recuperación atlética)
+  const rate = hasInput ? accel : decel
+  const maxStep = rate * dt
+
+  // Persigue el objetivo como vector (feel uniforme en cualquier dirección)
+  const dvx = targetX - v.x
+  const dvz = targetZ - v.z
+  const dlen = Math.hypot(dvx, dvz)
+  if (dlen <= maxStep || dlen === 0) {
+    v.x = targetX
+    v.z = targetZ
   } else {
-    const decay = Math.pow(friction, dt)
-    v.x *= decay
-    v.z *= decay
-    // Corta residuales imperceptibles para detenerse limpio
-    if (Math.abs(v.x) < 1e-3) v.x = 0
-    if (Math.abs(v.z) < 1e-3) v.z = 0
+    const s = maxStep / dlen
+    v.x += dvx * s
+    v.z += dvz * s
   }
 
-  // Integración semi-implícita (posición tras actualizar velocidad)
+  // Integración (posición tras actualizar velocidad)
   const p = state.position
   p.x += v.x * dt
   p.z += v.z * dt
